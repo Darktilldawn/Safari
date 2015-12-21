@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package io.github.darktilldawn.Safari.Commands;
+package io.github.darktilldawn.safari.commands;
 
 import java.util.Optional;
 

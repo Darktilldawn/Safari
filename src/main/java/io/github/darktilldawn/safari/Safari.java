@@ -22,7 +22,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package io.github.darktilldawn.Safari;
+package io.github.darktilldawn.safari;
 
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -44,13 +44,13 @@ import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.text.Texts;
 import org.spongepowered.api.world.TeleportHelper;
 
-import io.github.darktilldawn.Safari.Commands.SafariExecutor;
-import io.github.darktilldawn.Safari.Commands.SafariReloadExecutor;
-import io.github.darktilldawn.Safari.Commands.SafariSetExecutor;
+import io.github.darktilldawn.safari.commands.SafariExecutor;
+import io.github.darktilldawn.safari.commands.SafariReloadExecutor;
+import io.github.darktilldawn.safari.commands.SafariSetExecutor;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 
-@Plugin(id = "Safari", name = "Safari", version = ".01")
+@Plugin(id = "Safari", name = "Safari", version = "0.1")
 public class Safari {
 	// CTRL + SHIFT + O == Auto Import
 	// CTRL + SHIFT + F == Auto Format
