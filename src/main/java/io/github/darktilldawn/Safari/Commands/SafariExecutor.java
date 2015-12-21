@@ -39,24 +39,19 @@ public class SafariExecutor implements CommandExecutor {
 
 	public CommandResult execute(CommandSource src, CommandContext ctx) throws CommandException {
 		Optional<Player> optionalTarget = ctx.getOne("player");
-		
-		if(optionalTarget.isPresent())
-		{
+
+		if (optionalTarget.isPresent()) {
 			Player player = optionalTarget.get();
-			//player.setLocation(location);
+			// player.setLocation(location);
 			src.sendMessage(Texts.of(TextColors.GREEN, "Success: ", TextColors.YELLOW,
 					"You have teleported " + player.getName() + " to the SafariZone"));
-		}
-		else
-		{
+		} else {
 			if (src instanceof Player) {
 				Player player = (Player) src;
-				//player.setLocation(location);
+				// player.setLocation(location);
 				src.sendMessage(Texts.of(TextColors.GREEN, "Success: ", TextColors.YELLOW,
 						"You have been Teleported to the SafariZone"));
-			}
-			else
-			{
+			} else {
 				src.sendMessage(Texts.of(TextColors.DARK_RED, "Error: ", TextColors.RED,
 						"You cannot be teleported, you are not a player!"));
 			}

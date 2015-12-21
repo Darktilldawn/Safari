@@ -24,6 +24,7 @@
  */
 package io.github.darktilldawn.Safari;
 
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -32,32 +33,45 @@ import javax.inject.Inject;
 
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
+import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
+import org.spongepowered.api.config.DefaultConfig;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.text.Texts;
-import org.spongepowered.api.command.args.GenericArguments;
+import org.spongepowered.api.world.TeleportHelper;
 
 import io.github.darktilldawn.Safari.Commands.SafariExecutor;
 import io.github.darktilldawn.Safari.Commands.SafariReloadExecutor;
 import io.github.darktilldawn.Safari.Commands.SafariSetExecutor;
+import ninja.leaping.configurate.commented.CommentedConfigurationNode;
+import ninja.leaping.configurate.loader.ConfigurationLoader;
 
 @Plugin(id = "Safari", name = "Safari", version = ".01")
 public class Safari {
-	//CTRL + SHIFT + O == Auto Import
-	//CTRL + SHIFT + F == Auto Format
-	//CTRL + SHIFT + I == Auto Indent
-	
+	// CTRL + SHIFT + O == Auto Import
+	// CTRL + SHIFT + F == Auto Format
+	// CTRL + SHIFT + I == Auto Indent
+
 	private static Safari instance;
+	public static TeleportHelper helper;
 
 	@Inject
 	private Logger logger;
 
 	@Inject
 	private Game game;
+
+	@Inject
+	@DefaultConfig(sharedRoot = true)
+	private Path defaultConfig;
+
+	@Inject
+	@DefaultConfig(sharedRoot = true)
+	private ConfigurationLoader<CommentedConfigurationNode> configManager;
 
 	public static Safari getInstance() {
 		return instance;
@@ -90,29 +104,19 @@ public class Safari {
 		HashMap<List<String>, CommandSpec> subcommands = new HashMap<List<String>, CommandSpec>();
 
 		// /safari reload
-		subcommands.put(Arrays.asList("reload"), CommandSpec.builder()
-				.description(Texts.of("Reload Config"))
-				.permission("safari.command.safari.reload")
-				.executor(new SafariReloadExecutor())
-				.build());
+		subcommands.put(Arrays.asList("reload"), CommandSpec.builder().description(Texts.of("Reload Config"))
+				.permission("safari.command.safari.reload").executor(new SafariReloadExecutor()).build());
 
 		// /safari set
-		subcommands.put(Arrays.asList("set"), CommandSpec.builder()
-				.description(Texts.of("Set SafariZone"))
-				.permission("safari.command.safari.set")
-				.executor(new SafariSetExecutor())
-				.build());
+		subcommands.put(Arrays.asList("set"), CommandSpec.builder().description(Texts.of("Set SafariZone"))
+				.permission("safari.command.safari.set").executor(new SafariSetExecutor()).build());
 
 		// /safari
-		CommandSpec safariCommandSpec = CommandSpec.builder()
-				.description(Texts.of("Usage: /safari [set|reload]"))
+		CommandSpec safariCommandSpec = CommandSpec.builder().description(Texts.of("Usage: /safari [set|reload]"))
 				.permission("safari.command.safari")
-				.arguments(GenericArguments.optional(
-						GenericArguments.onlyOne(
-								GenericArguments.player(Texts.of("player")))))
-				.executor(new SafariExecutor())
-				.children(subcommands)
-				.build();
+				.arguments(GenericArguments
+						.optional(GenericArguments.onlyOne(GenericArguments.player(Texts.of("player")))))
+				.executor(new SafariExecutor()).children(subcommands).build();
 
 		game.getCommandManager().register(this, safariCommandSpec, "safari");
 	}
