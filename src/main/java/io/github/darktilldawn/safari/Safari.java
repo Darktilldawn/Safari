@@ -36,6 +36,10 @@ import javax.inject.Inject;
 
 import com.google.common.collect.ImmutableList;
 import io.github.darktilldawn.safari.commands.SafariWarpExecutor;
+import io.github.darktilldawn.safari.commands.SafariReloadExecutor;
+import io.github.darktilldawn.safari.commands.SafariSetExecutor;
+import ninja.leaping.configurate.commented.CommentedConfigurationNode;
+import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
@@ -52,10 +56,6 @@ import org.spongepowered.api.service.economy.EconomyService;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.world.TeleportHelper;
 
-import io.github.darktilldawn.safari.commands.SafariReloadExecutor;
-import io.github.darktilldawn.safari.commands.SafariSetExecutor;
-import ninja.leaping.configurate.commented.CommentedConfigurationNode;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
 
 @Plugin(id = "Safari", name = "Safari", version = "0.1")
 public class Safari {
@@ -168,7 +168,7 @@ public class Safari {
         this.config.getChildrenMap().entrySet().stream().forEach(entry -> {
             String name = String.valueOf(entry.getKey());
             Optional<SafariWarp> warp = SafariWarp.fromConfig(this.config, name);
-            if(warp.isPresent()) {
+            if (warp.isPresent()) {
                 this.warps.add(warp.get());
             } else {
                 this.getLogger().error("Failed to load warp '".concat(name).concat("'"));

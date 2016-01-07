@@ -40,18 +40,24 @@ public class SafariWarpExecutor implements CommandExecutor {
 
     @Override
     public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
-        String warp = (String) args.getOne("warp").get();
-        Player player = (Player) args.getOne("player").get();
+        if(args.getOne("player").isPresent()) {
+            String warp = (String) args.getOne("warp").get();
+            Player player = (Player) args.getOne("player").get();
 
-        List<SafariWarp> warps = Safari.getInstance().getWarps();
-        Optional<SafariWarp> applicable = warps.stream().filter(safariWarp -> safariWarp.getName().equals(warp)).findFirst();
-        if(applicable.isPresent()) {
-            applicable.get().applyTo(player);
+            List<SafariWarp> warps = Safari.getInstance().getWarps();
+            Optional<SafariWarp> applicable = warps.stream().filter(safariWarp -> safariWarp.getName().equals(warp)).findFirst();
+            if (applicable.isPresent()) {
+                applicable.get().applyTo(player);
+            } else {
+                player.sendMessage(Text.of(TextColors.RED, "Warp '", warp, "' does not exist!"));
+            }
+
         } else {
-            player.sendMessage(Text.of(TextColors.RED, "Warp '", warp, "' does not exist!"));
+            src.sendMessage(Text.of(TextColors.RED, "You are not a player... Sorry."));
         }
 
         return CommandResult.success();
+
     }
 
 }
