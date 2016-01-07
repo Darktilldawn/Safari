@@ -32,6 +32,7 @@ import org.spongepowered.api.command.spec.CommandExecutor;
 
 public class SafariSetExecutor implements CommandExecutor {
 
+	@Override
 	public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
 		return CommandResult.success();
 	}

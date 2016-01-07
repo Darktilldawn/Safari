@@ -52,9 +52,15 @@ public class SafariWarp {
         this.location = location;
         this.amount = amount;
         this.safari = Safari.getInstance();
+        this.name = name;
     }
 
     public void applyTo(Player player) {
+        if(this.safari.isFreeMode()) {
+            player.setLocation(this.location);
+            return;
+        }
+
         Optional<UniqueAccount> accountOptional = this.safari.getService().getAccount(player.getUniqueId());
         Optional<Currency> currencyOptional = this.safari.getService().getCurrencies().stream().filter(currency -> currency.getDisplayName().toPlain().equalsIgnoreCase(this.currency)).findFirst();
         if(!currencyOptional.isPresent()) {
@@ -75,11 +81,12 @@ public class SafariWarp {
                 player.sendMessage(Text.of(TextColors.RED, "Failed warp for unknown reasons."));
             } else {
                 player.setLocation(this.location);
+                player.sendMessage(Text.of(TextColors.AQUA, "You have been teleported to '", this.name, "'"));
             }
         }
     }
 
-    public void writeToNode(ConfigurationNode node) {
+    public void writeToConfig(ConfigurationNode node) {
         ConfigurationNode newNode = this.safari.getConfigManager().createEmptyNode();
         node.getNode(this.name).setValue(newNode);
         newNode.getNode("currency").setValue(this.currency);
