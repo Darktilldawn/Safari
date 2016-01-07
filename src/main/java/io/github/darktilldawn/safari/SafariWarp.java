@@ -23,12 +23,12 @@
 package io.github.darktilldawn.safari;
 
 import com.flowpowered.math.vector.Vector3d;
+import io.github.darktilldawn.safari.scheduler.DelayedTeleportTask;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.service.economy.Currency;
-import org.spongepowered.api.service.economy.account.Account;
 import org.spongepowered.api.service.economy.account.UniqueAccount;
 import org.spongepowered.api.service.economy.transaction.ResultType;
 import org.spongepowered.api.service.economy.transaction.TransactionResult;
@@ -39,6 +39,7 @@ import org.spongepowered.api.world.World;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 public class SafariWarp {
     private Safari safari;
@@ -46,43 +47,102 @@ public class SafariWarp {
     private String currency;
     private Location<World> location;
     private double amount;
+    private long duration;
 
-    public SafariWarp(String name, String currency, Location<World> location, double amount) {
+    public SafariWarp(String name, String currency, Location<World> location, double amount, long duration) {
         this.currency = currency;
         this.location = location;
         this.amount = amount;
         this.safari = Safari.getInstance();
         this.name = name;
+        this.duration = duration;
+    }
+
+    public static Optional<SafariWarp> fromConfig(ConfigurationNode node, String name) {
+        ConfigurationNode sub = node.getNode(name);
+        String currency = sub.getNode("currency").getString();
+        double amount = sub.getNode("price").getDouble();
+        long duration = sub.getNode("duration").getLong();
+        String worldName = sub.getNode("world").getString();
+        String locationString = sub.getNode("location").getString();
+        if (currency == null || worldName == null || locationString == null) {
+            Safari.getInstance().getLogger().error("Safari Warp '".concat(String.valueOf(name)).concat("' is missing a value! (currency=").concat(String.valueOf(currency)).concat(", worldName=").concat(String.valueOf(worldName)).concat(", locationString=").concat(String.valueOf(locationString)).concat(")"));
+            return Optional.empty();
+        }
+
+        Optional<World> worldOptional = Sponge.getServer().getWorld(worldName);
+        if (!worldOptional.isPresent()) {
+            Safari.getInstance().getLogger().error("World '".concat(worldName).concat("' not present for warp '").concat(name).concat("'"));
+            return Optional.empty();
+        }
+
+        World world = worldOptional.get();
+        Optional<Vector3d> vector3dOptional = SafariWarp.vectorFromString(locationString);
+        if (!vector3dOptional.isPresent()) {
+            Safari.getInstance().getLogger().error("Unrecognized location string '".concat(locationString).concat("'"));
+            return Optional.empty();
+        }
+
+        Location<World> location = new Location<>(world, vector3dOptional.get());
+
+        return Optional.of(new SafariWarp(name, currency, location, amount, duration));
+    }
+
+    private static Optional<Vector3d> vectorFromString(String src) {
+        try {
+            String[] pieces = src.replaceAll(" ", "").split(",");
+            double x = Double.parseDouble(pieces[0]);
+            double y = Double.parseDouble(pieces[1]);
+            double z = Double.parseDouble(pieces[2]);
+            return Optional.of(new Vector3d(x, y, z));
+        } catch (IndexOutOfBoundsException | NumberFormatException error) {
+            return Optional.empty();
+        }
+    }
+
+    private static String vectorToString(Vector3d vector) {
+        return new StringBuilder().append(vector.getX()).append(",").append(vector.getY()).append(",").append(vector.getZ()).toString();
     }
 
     public void applyTo(Player player) {
-        if(this.safari.isFreeMode()) {
-            player.setLocation(this.location);
+        if (this.safari.isFreeMode()) {
+            this.executeTeleport(player);
             return;
         }
 
         Optional<UniqueAccount> accountOptional = this.safari.getService().getAccount(player.getUniqueId());
         Optional<Currency> currencyOptional = this.safari.getService().getCurrencies().stream().filter(currency -> currency.getDisplayName().toPlain().equalsIgnoreCase(this.currency)).findFirst();
-        if(!currencyOptional.isPresent()) {
+        if (!currencyOptional.isPresent()) {
             this.safari.getLogger().error("No currency called '".concat(String.valueOf(this.currency).concat("'")));
             return;
         }
 
-        if(!accountOptional.isPresent()) {
+        if (!accountOptional.isPresent()) {
             player.sendMessage(Text.of(TextColors.RED, "You do not have an economy account! ", TextColors.AQUA, "We'll create one for you, but you won't have any money..."));
             this.safari.getService().createAccount(player.getUniqueId());
         } else {
             UniqueAccount account = accountOptional.get();
             TransactionResult result = account.withdraw(currencyOptional.get(), BigDecimal.valueOf(this.amount), Cause.of(this));
             ResultType resultType = result.getResult();
-            if(resultType == ResultType.ACCOUNT_NO_SPACE) {
+            if (resultType == ResultType.ACCOUNT_NO_SPACE) {
                 player.sendMessage(Text.of(TextColors.RED, "You do not have enough money, you need at least ", this.amount, " ", currencyOptional.get().getPluralDisplayName(), " to use that warp."));
             } else if (resultType != ResultType.SUCCESS) {
                 player.sendMessage(Text.of(TextColors.RED, "Failed warp for unknown reasons."));
             } else {
-                player.setLocation(this.location);
-                player.sendMessage(Text.of(TextColors.AQUA, "You have been teleported to '", this.name, "'"));
+                this.executeTeleport(player);
             }
+        }
+    }
+
+    private void executeTeleport(Player player) {
+        if (this.duration >= 0) {
+            DelayedTeleportTask task = new DelayedTeleportTask(player, player.getLocation(), player.getRotation());
+            player.setLocation(this.location);
+            task.runTaskLater(Safari.getInstance(), this.duration, TimeUnit.SECONDS);
+            player.sendMessage(Text.of(TextColors.AQUA, "You have been teleported to '", this.name, ".' You can remain here for ", String.format("%0d.%0d minutes", TimeUnit.MILLISECONDS.toMinutes(this.duration), TimeUnit.MILLISECONDS.toSeconds(this.duration) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(this.duration))), ", then you will be teleported back."));
+        } else {
+            player.setLocation(this.location);
+            player.sendMessage(Text.of(TextColors.AQUA, "You have been teleported to '", this.name));
         }
     }
 
@@ -93,35 +153,7 @@ public class SafariWarp {
         newNode.getNode("location").setValue(SafariWarp.vectorToString(this.location.getPosition()));
         newNode.getNode("world").setValue(this.location.getExtent().getName());
         newNode.getNode("price").setValue(this.amount);
-    }
-
-    public static Optional<SafariWarp> fromConfig(ConfigurationNode node, String name) {
-        ConfigurationNode sub = node.getNode(name);
-        String currency = sub.getNode("currency").getString();
-        double amount = sub.getNode("price").getDouble();
-        String worldName = sub.getNode("world").getString();
-        String locationString = sub.getNode("location").getString();
-        if(currency == null || worldName == null || locationString == null) {
-            Safari.getInstance().getLogger().error("Safari Warp '".concat(String.valueOf(name)).concat("' is missing a value! (currency=").concat(String.valueOf(currency)).concat(", worldName=").concat(String.valueOf(worldName)).concat(", locationString=").concat(String.valueOf(locationString)).concat(")"));
-            return Optional.empty();
-        }
-
-        Optional<World> worldOptional = Sponge.getServer().getWorld(worldName);
-        if(!worldOptional.isPresent()) {
-            Safari.getInstance().getLogger().error("World '".concat(worldName).concat("' not present for warp '").concat(name).concat("'"));
-            return Optional.empty();
-        }
-
-        World world = worldOptional.get();
-        Optional<Vector3d> vector3dOptional = SafariWarp.vectorFromString(locationString);
-        if(!vector3dOptional.isPresent()) {
-            Safari.getInstance().getLogger().error("Unrecognized location string '".concat(locationString).concat("'"));
-            return Optional.empty();
-        }
-
-        Location<World> location = new Location<>(world, vector3dOptional.get());
-
-        return Optional.of(new SafariWarp(name, currency, location, amount));
+        newNode.getNode("duration").setValue(this.duration);
     }
 
     public double getAmount() {
@@ -144,19 +176,7 @@ public class SafariWarp {
         return this.safari;
     }
 
-    private static Optional<Vector3d> vectorFromString(String src) {
-        try {
-            String[] pieces = src.replaceAll(" ", "").split(",");
-            double x = Double.parseDouble(pieces[0]);
-            double y = Double.parseDouble(pieces[1]);
-            double z = Double.parseDouble(pieces[2]);
-            return Optional.of(new Vector3d(x, y, z));
-        } catch (IndexOutOfBoundsException | NumberFormatException error) {
-            return Optional.empty();
-        }
-    }
-
-    private static String vectorToString(Vector3d vector) {
-        return new StringBuilder().append(vector.getX()).append(",").append(vector.getY()).append(",").append(vector.getZ()).toString();
+    public long getduration() {
+        return this.duration;
     }
 }

@@ -24,16 +24,56 @@
  */
 package io.github.darktilldawn.safari.commands;
 
+import io.github.darktilldawn.safari.Safari;
+import io.github.darktilldawn.safari.SafariWarp;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
+import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandExecutor;
+import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.world.Location;
+import org.spongepowered.api.world.World;
 
 public class SafariSetExecutor implements CommandExecutor {
 
 	@Override
 	public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
+        Location location = (Location) args.getOne("location").get();
+        String name = (String) args.getOne("name").get();
+        String currency = (String) args.getOne("currency").get();
+        double cost = (Double) args.getOne("cost").get();
+        long duration = ((Integer) (args.getOne("duration").get())).longValue();
+
+        if(duration < 0) {
+            src.sendMessage(Text.of(TextColors.RED, "Warning! The duration you have entered is less than 0, this will cause the warp teleport to be permanent!"));
+        }
+
+        if(cost < 0) {
+            src.sendMessage(Text.of(TextColors.RED, "Cost cannot be less than 0..."));
+        } else {
+            if(Safari.getInstance().getService().getCurrencies().stream().filter(curr -> curr.getDisplayName().toPlain().equalsIgnoreCase(currency)).findFirst().isPresent()) {
+                if(!(location.getExtent() instanceof World)) {
+                    src.sendMessage(Text.of(TextColors.RED, "That location is not linked to a world. It may be a chunk location."));
+                } else {
+                    SafariWarp warp = new SafariWarp(name, currency, location, cost, duration);
+                    Safari safari = Safari.getInstance();
+                    if(safari.getWarps().stream().filter(warp1 -> warp.getName().equals(warp1.getName())).findFirst().isPresent()) {
+                        safari.removeWarp(safari.getWarps().stream().filter(warp1 -> warp.getName().equals(warp1.getName())).findFirst().get());
+                        safari.addWarp(warp);
+                        src.sendMessage(Text.of(TextColors.AQUA, "Edited warp '", warp.getName(), "'"));
+                    } else {
+                        safari.addWarp(warp);
+                        src.sendMessage(Text.of(TextColors.AQUA, "Created new warp '", warp.getName(), "'"));
+                    }
+                }
+            } else {
+                src.sendMessage(Text.of(TextColors.RED, "Unrecognized currency '", currency, "'"));
+            }
+        }
 		return CommandResult.success();
 	}
+
 }

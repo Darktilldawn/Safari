@@ -144,6 +144,9 @@ public class Safari {
         // /safari set
         subcommands.put(Arrays.asList("set", "edit"), CommandSpec.builder().description(Text.of("Edit or Create a SafariWarp"))
                 .permission("safari.command.safari.set")
+                .arguments(
+                        GenericArguments.onlyOne(GenericArguments.location(Text.of("location"))),
+                        GenericArguments.onlyOne(GenericArguments.string(Text.of("name"))))
                 .executor(new SafariSetExecutor()).build());
 
         // /safari warp
@@ -151,7 +154,10 @@ public class Safari {
                 .permission("safari.command.safari.tp")
                 .arguments(
                         GenericArguments.onlyOne(GenericArguments.player(Text.of("player"))),
-                        GenericArguments.onlyOne(GenericArguments.string(Text.of("warp"))))
+                        GenericArguments.onlyOne(GenericArguments.string(Text.of("warp"))),
+                        GenericArguments.onlyOne(GenericArguments.string(Text.of("currency"))),
+                        GenericArguments.onlyOne(GenericArguments.doubleNum(Text.of("cost"))),
+                        GenericArguments.onlyOne(GenericArguments.integer(Text.of("duration"))))
                 .executor(new SafariWarpExecutor())
                 .build());
 
@@ -198,6 +204,18 @@ public class Safari {
 
     public boolean isFreeMode() {
         return this.freeMode;
+    }
+
+    public void replaceWarp(int index, SafariWarp warp) {
+        this.warps.set(index, warp);
+    }
+
+    public void removeWarp(SafariWarp warp) {
+        this.warps.remove(warp);
+    }
+
+    public void addWarp(SafariWarp warp) {
+        this.warps.add(warp);
     }
 
     public void reloadConfig() {
