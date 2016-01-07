@@ -32,7 +32,7 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.entity.living.player.Player;
-import org.spongepowered.api.text.Texts;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
 
 public class SafariExecutor implements CommandExecutor {
@@ -43,16 +43,16 @@ public class SafariExecutor implements CommandExecutor {
 		if (optionalTarget.isPresent()) {
 			Player player = optionalTarget.get();
 			// player.setLocation(location);
-			src.sendMessage(Texts.of(TextColors.GREEN, "Success: ", TextColors.YELLOW,
+			src.sendMessage(Text.of(TextColors.GREEN, "Success: ", TextColors.YELLOW,
 					"You have teleported " + player.getName() + " to the SafariZone"));
 		} else {
 			if (src instanceof Player) {
 				Player player = (Player) src;
 				// player.setLocation(location);
-				src.sendMessage(Texts.of(TextColors.GREEN, "Success: ", TextColors.YELLOW,
+				src.sendMessage(Text.of(TextColors.GREEN, "Success: ", TextColors.YELLOW,
 						"You have been Teleported to the SafariZone"));
 			} else {
-				src.sendMessage(Texts.of(TextColors.DARK_RED, "Error: ", TextColors.RED,
+				src.sendMessage(Text.of(TextColors.DARK_RED, "Error: ", TextColors.RED,
 						"You cannot be teleported, you are not a player!"));
 			}
 		}

@@ -24,15 +24,19 @@
  */
 package io.github.darktilldawn.safari;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 import javax.inject.Inject;
 
+import ninja.leaping.configurate.ConfigurationNode;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
+import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.config.DefaultConfig;
@@ -41,7 +45,8 @@ import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.plugin.Plugin;
-import org.spongepowered.api.text.Texts;
+import org.spongepowered.api.service.economy.EconomyService;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.world.TeleportHelper;
 
 import io.github.darktilldawn.safari.commands.SafariExecutor;
@@ -52,9 +57,6 @@ import ninja.leaping.configurate.loader.ConfigurationLoader;
 
 @Plugin(id = "Safari", name = "Safari", version = "0.1")
 public class Safari {
-	// CTRL + SHIFT + O == Auto Import
-	// CTRL + SHIFT + F == Auto Format
-	// CTRL + SHIFT + I == Auto Indent
 
 	private static Safari instance;
 	public static TeleportHelper helper;
@@ -72,6 +74,9 @@ public class Safari {
 	@Inject
 	@DefaultConfig(sharedRoot = true)
 	private ConfigurationLoader<CommentedConfigurationNode> configManager;
+    private ConfigurationNode config;
+    private EconomyService service;
+    private boolean freeMode;
 
 	public static Safari getInstance() {
 		return instance;
@@ -87,12 +92,28 @@ public class Safari {
 
 	@Listener
 	public void preInit(GamePreInitializationEvent event) {
-		instance = this;
-	}
+		Safari.instance = this;
+        Safari.helper = this.game.getTeleportHelper();
+        try {
+            this.config = configManager.load();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Optional<EconomyService> economyServiceOptional = this.game.getServiceManager().provide(EconomyService.class);
+        if(!economyServiceOptional.isPresent()) {
+            this.logger.warn("No economy plugin is installed! Starting up in free mode.");
+            this.logger.warn("In free mode, all warps are free! (Assuming you don't want that, install an economy plugin!)");
+            this.freeMode = true;
+        } else {
+            this.service = economyServiceOptional.get();
+            this.freeMode = false;
+        }
+    }
 
 	@Listener
 	public void init(GameInitializationEvent event) {
-		registerCommands();
+		this.registerCommands();
 	}
 
 	@Listener
@@ -104,20 +125,40 @@ public class Safari {
 		HashMap<List<String>, CommandSpec> subcommands = new HashMap<List<String>, CommandSpec>();
 
 		// /safari reload
-		subcommands.put(Arrays.asList("reload"), CommandSpec.builder().description(Texts.of("Reload Config"))
+		subcommands.put(Arrays.asList("reload"), CommandSpec.builder().description(Text.of("Reload Config"))
 				.permission("safari.command.safari.reload").executor(new SafariReloadExecutor()).build());
 
 		// /safari set
-		subcommands.put(Arrays.asList("set"), CommandSpec.builder().description(Texts.of("Set SafariZone"))
+		subcommands.put(Arrays.asList("set", "edit"), CommandSpec.builder().description(Text.of("Edit or Create a SafariWarp"))
 				.permission("safari.command.safari.set").executor(new SafariSetExecutor()).build());
 
 		// /safari
-		CommandSpec safariCommandSpec = CommandSpec.builder().description(Texts.of("Usage: /safari [set|reload]"))
+		CommandSpec safariCommandSpec = CommandSpec.builder().description(Text.of("Usage: /safari [set|edit|reload]"))
 				.permission("safari.command.safari")
 				.arguments(GenericArguments
-						.optional(GenericArguments.onlyOne(GenericArguments.player(Texts.of("player")))))
+						.optional(GenericArguments.onlyOne(GenericArguments.player(Text.of("player")))))
 				.executor(new SafariExecutor()).children(subcommands).build();
 
-		game.getCommandManager().register(this, safariCommandSpec, "safari");
+		this.game.getCommandManager().register(this, safariCommandSpec, "safari");
 	}
+
+    public ConfigurationLoader<CommentedConfigurationNode> getConfigManager() {
+        return this.configManager;
+    }
+
+    public ConfigurationNode getConfig() {
+        return this.config;
+    }
+
+    public EconomyService getService() {
+        return this.service;
+    }
+
+    public TeleportHelper getHelper() {
+        return Safari.helper;
+    }
+
+    public boolean isFreeMode() {
+        return this.freeMode;
+    }
 }
