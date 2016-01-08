@@ -196,7 +196,7 @@ public class SafariWarp {
         return this.safari;
     }
 
-    public long getduration() {
+    public long getDuration() {
         return this.duration;
     }
 }
