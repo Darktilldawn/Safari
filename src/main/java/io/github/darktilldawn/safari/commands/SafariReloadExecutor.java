@@ -24,15 +24,22 @@
  */
 package io.github.darktilldawn.safari.commands;
 
+import io.github.darktilldawn.safari.Safari;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.spec.CommandExecutor;
+import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.format.TextColors;
 
 public class SafariReloadExecutor implements CommandExecutor {
-	
+
+    @Override
 	public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
+        Safari.getInstance().reloadConfig();
+        Safari.getInstance().reloadWarps();
+        src.sendMessage(Text.of(TextColors.AQUA, "Safari has been reloaded."));
 		return CommandResult.success();
 	}
 }
