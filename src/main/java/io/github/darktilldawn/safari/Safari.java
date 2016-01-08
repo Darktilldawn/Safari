@@ -35,6 +35,11 @@ import java.util.Optional;
 import javax.inject.Inject;
 
 import com.google.common.collect.ImmutableList;
+import com.typesafe.config.ConfigParseOptions;
+import com.typesafe.config.ConfigSyntax;
+import io.github.darktilldawn.safari.commands.SafariListExecutor;
+import io.github.darktilldawn.safari.commands.SafariRemoveExecutor;
+import io.github.darktilldawn.safari.commands.SafariSaveCommand;
 import io.github.darktilldawn.safari.commands.SafariWarpExecutor;
 import io.github.darktilldawn.safari.commands.SafariReloadExecutor;
 import io.github.darktilldawn.safari.commands.SafariSetExecutor;
@@ -44,6 +49,7 @@ import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
+import org.spongepowered.api.GameState;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.config.DefaultConfig;
@@ -52,6 +58,7 @@ import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppedServerEvent;
+import org.spongepowered.api.event.game.state.GameStoppingServerEvent;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.service.economy.EconomyService;
 import org.spongepowered.api.text.Text;
@@ -104,11 +111,11 @@ public class Safari {
     @Listener
     public void init(GameInitializationEvent event) {
         this.registerCommands();
-        this.reloadWarps();
     }
 
     @Listener
     public void onGameStarted(GameStartedServerEvent event) {
+        this.getLogger().info("Searching for economy plugin... ");
         Optional<EconomyService> economyServiceOptional = this.game.getServiceManager().provide(EconomyService.class);
         if (!economyServiceOptional.isPresent()) {
             this.logger.warn("No economy plugin is installed! Starting up in free mode.");
@@ -117,12 +124,27 @@ public class Safari {
         } else {
             this.service = economyServiceOptional.get();
             this.freeMode = false;
+            this.getLogger().info("Found economy plugin. Using provider: ".concat(economyServiceOptional.get().getClass().getName()));
         }
+
+        this.getLogger().info("Loading warps...");
+        this.reloadWarps();
+        this.getLogger().info("Warps loaded!");
+
         this.getLogger().info("Safari has finished loading!");
     }
 
     @Listener
+    public void onServerStopping(GameStoppingServerEvent event) {
+        SafariWarp.endAllSafaris();
+    }
+
+    @Listener
     public void onServerStopped(GameStoppedServerEvent event) {
+        this.saveConfig();
+    }
+
+    public void saveConfig() {
         this.warps.forEach(safariWarp -> {
             safariWarp.writeToConfig(this.getConfig());
         });
@@ -146,7 +168,7 @@ public class Safari {
         subcommands.put(Arrays.asList("set", "edit"), CommandSpec.builder().description(Text.of("Edit or Create a SafariWarp"))
                 .permission("safari.command.safari.set")
                 .arguments(
-                        GenericArguments.onlyOne(GenericArguments.location(Text.of("location"))),
+                        GenericArguments.optional(GenericArguments.onlyOne(GenericArguments.location(Text.of("location")))),
                         GenericArguments.onlyOne(GenericArguments.string(Text.of("name"))),
                         GenericArguments.onlyOne(GenericArguments.string(Text.of("currency"))),
                         GenericArguments.onlyOne(GenericArguments.doubleNum(Text.of("cost"))),
@@ -154,16 +176,32 @@ public class Safari {
                 .executor(new SafariSetExecutor()).build());
 
         // /safari warp
-        subcommands.put(Arrays.asList("tp", "teleport", "warp", "goto", "take"), CommandSpec.builder().description(Text.of("Takes someone on a Safari."))
-                .permission("safari.command.safari.tp")
+        subcommands.put(Arrays.asList("tp", "teleport", "warp", "goto", "take"), CommandSpec.builder().description(Text.of("Takes you on a Safari."))
+                .permission("safari.command.safari")
                 .arguments(
                         GenericArguments.onlyOne(GenericArguments.string(Text.of("warp"))))
                 .executor(new SafariWarpExecutor())
                 .build());
 
+        // /safari list
+        subcommands.put(Arrays.asList("list"), CommandSpec.builder().description(Text.of("Lists all safaris"))
+                .executor(new SafariListExecutor()).build());
+
+        // /safari remove
+        subcommands.put(Arrays.asList("remove"), CommandSpec.builder().description(Text.of("Removes a safari"))
+                .arguments(GenericArguments.onlyOne(GenericArguments.string(Text.of("warp"))))
+                .executor(new SafariRemoveExecutor()).build());
+
+        // /safari save
+        subcommands.put(Arrays.asList("save"), CommandSpec.builder().description(Text.of("Saves a safari"))
+                .executor(new SafariSaveCommand()).build());
+
         // /safari
-        CommandSpec safariCommandSpec = CommandSpec.builder().description(Text.of("Usage: /safari [set|edit|reload]"))
+        CommandSpec safariCommandSpec = CommandSpec.builder().description(Text.of("Usage: /safari [set | edit | reload]"))
                 .permission("safari.command.safari")
+                .arguments(
+                        GenericArguments.onlyOne(GenericArguments.string(Text.of("warp"))))
+                .executor(new SafariWarpExecutor())
                 .children(subcommands).build();
 
         this.game.getCommandManager().register(this, safariCommandSpec, "safari");
@@ -171,11 +209,12 @@ public class Safari {
 
     public void reloadWarps() {
         this.warps.clear();
-        this.config.getChildrenMap().entrySet().stream().forEach(entry -> {
-            String name = String.valueOf(entry.getKey());
+        this.config.getChildrenMap().values().stream().forEach(node -> {
+            String name = String.valueOf(node.getKey());
             Optional<SafariWarp> warp = SafariWarp.fromConfig(this.config, name);
             if (warp.isPresent()) {
                 this.warps.add(warp.get());
+                this.getLogger().info("Loaded warp '".concat(warp.get().getName()).concat("'"));
             } else {
                 this.getLogger().error("Failed to load warp '".concat(name).concat("'"));
             }
@@ -220,7 +259,7 @@ public class Safari {
 
     public void reloadConfig() {
         try {
-            this.config = configManager.load();
+            this.config = this.configManager.load();
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -23,7 +23,7 @@
 package io.github.darktilldawn.safari;
 
 import com.flowpowered.math.vector.Vector3d;
-import io.github.darktilldawn.safari.scheduler.DelayedTeleportTask;
+import io.github.darktilldawn.safari.scheduler.SafariTeleportTask;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.entity.living.player.Player;
@@ -38,11 +38,19 @@ import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
 
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class SafariWarp {
+    private static Map<UUID, SafariTeleportTask> occupied;
+
+    static {
+        occupied = new HashMap<>();
+    }
+
     private Safari safari;
     private String name;
     private String currency;
@@ -52,7 +60,7 @@ public class SafariWarp {
 
     public SafariWarp(String name, String currency, Location<World> location, double amount, long duration) {
         this.currency = currency;
-        this.location = location;
+        this.location = new Location<>(location.getExtent(), location.getBlockPosition());
         this.amount = amount;
         this.safari = Safari.getInstance();
         this.name = name;
@@ -105,7 +113,16 @@ public class SafariWarp {
         return new StringBuilder().append(vector.getX()).append(",").append(vector.getY()).append(",").append(vector.getZ()).toString();
     }
 
+    public static void endAllSafaris() {
+        SafariWarp.occupied.values().forEach(SafariTeleportTask::run);
+    }
+
     public void applyTo(Player player) {
+        if (SafariWarp.occupied.keySet().contains(player.getUniqueId())) {
+            player.sendMessage(Text.of(TextColors.RED, "You are already in a Safari!"));
+            return;
+        }
+
         if (this.safari.isFreeMode()) {
             this.executeTeleport(player);
             return;
@@ -125,11 +142,12 @@ public class SafariWarp {
             UniqueAccount account = accountOptional.get();
             TransactionResult result = account.withdraw(currencyOptional.get(), BigDecimal.valueOf(this.amount), Cause.of(this));
             ResultType resultType = result.getResult();
-            if (resultType == ResultType.ACCOUNT_NO_SPACE) {
+            if (resultType == ResultType.ACCOUNT_NO_FUNDS) {
                 player.sendMessage(Text.of(TextColors.RED, "You do not have enough money, you need at least ", this.amount, " ", currencyOptional.get().getPluralDisplayName(), " to use that warp."));
             } else if (resultType != ResultType.SUCCESS) {
                 player.sendMessage(Text.of(TextColors.RED, "Failed warp for unknown reasons."));
             } else {
+                player.sendMessage(Text.of(TextColors.YELLOW, this.amount, this.amount <= 1 ? currencyOptional.get().getDisplayName() : currencyOptional.get().getPluralDisplayName(), this.amount <= 1 ? "has" : "have", " been subtracted from your accounted!"));
                 this.executeTeleport(player);
             }
         }
@@ -137,10 +155,11 @@ public class SafariWarp {
 
     private void executeTeleport(Player player) {
         if (this.duration >= 0) {
-            DelayedTeleportTask task = new DelayedTeleportTask(player, player.getLocation(), player.getRotation());
+            SafariTeleportTask task = new SafariTeleportTask(player, player.getLocation(), player.getRotation(), SafariWarp.occupied);
+            SafariWarp.occupied.put(player.getUniqueId(), task);
             player.setLocation(this.location);
             task.runTaskLater(Safari.getInstance(), this.duration, TimeUnit.SECONDS);
-            String time = new StringBuilder().append(TimeUnit.SECONDS.toMinutes(this.duration)).append(".").append(this.duration - (((int) ((double) this.duration / 60))) * 60).append(" minutes").toString();
+            String time = new StringBuilder().append(TimeUnit.SECONDS.toMinutes(this.duration)).append(" minutes and ").append(this.duration - (((int) ((double) this.duration / 60))) * 60).append(" seconds").toString();
             player.sendMessage(Text.of(TextColors.AQUA, "You have been teleported to '", this.name, ".' You can remain here for ", time, ", then you will be teleported back."));
         } else {
             player.setLocation(this.location);
@@ -149,13 +168,12 @@ public class SafariWarp {
     }
 
     public void writeToConfig(ConfigurationNode node) {
-        ConfigurationNode newNode = this.safari.getConfigManager().createEmptyNode();
-        node.getNode(this.name).setValue(newNode);
-        newNode.getNode("currency").setValue(this.currency);
-        newNode.getNode("location").setValue(SafariWarp.vectorToString(this.location.getPosition()));
-        newNode.getNode("world").setValue(this.location.getExtent().getName());
-        newNode.getNode("price").setValue(this.amount);
-        newNode.getNode("duration").setValue(this.duration);
+        ConfigurationNode sub = node.getNode(this.name);
+        sub.getNode("currency").setValue(this.currency);
+        sub.getNode("location").setValue(SafariWarp.vectorToString(this.location.getPosition()));
+        sub.getNode("world").setValue(this.location.getExtent().getName());
+        sub.getNode("price").setValue(this.amount);
+        sub.getNode("duration").setValue(this.duration);
     }
 
     public double getAmount() {

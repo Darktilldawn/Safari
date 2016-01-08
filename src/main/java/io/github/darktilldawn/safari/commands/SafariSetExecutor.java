@@ -31,6 +31,7 @@ import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.GenericArguments;
+import org.spongepowered.api.command.source.LocatedSource;
 import org.spongepowered.api.command.spec.CommandExecutor;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.format.TextColors;
@@ -41,7 +42,17 @@ public class SafariSetExecutor implements CommandExecutor {
 
 	@Override
 	public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
-        Location location = (Location) args.getOne("location").get();
+        Location location;
+
+        if(args.getOne("location").isPresent()) {
+            location = (Location) args.getOne("location").get();
+        } else if (src instanceof LocatedSource) {
+            location = ((LocatedSource) src).getLocation();
+        } else {
+            src.sendMessage(Text.of(TextColors.RED, "No location was specified, and since you are not located anywhere, no default location could be used."));
+            return CommandResult.success();
+        }
+
         String name = (String) args.getOne("name").get();
         String currency = (String) args.getOne("currency").get();
         double cost = (Double) args.getOne("cost").get();

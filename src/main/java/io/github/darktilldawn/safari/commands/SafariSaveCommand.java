@@ -20,36 +20,24 @@
  *
  * @author Socratic_Phoenix (socraticphoenix@gmail.com)
  */
-package io.github.darktilldawn.safari.scheduler;
+package io.github.darktilldawn.safari.commands;
 
-import com.flowpowered.math.vector.Vector3d;
-import io.github.darktilldawn.safari.scheduler.util.SpongeRunnable;
-import org.spongepowered.api.entity.Entity;
-import org.spongepowered.api.world.Location;
-import org.spongepowered.api.world.World;
+import io.github.darktilldawn.safari.Safari;
+import org.spongepowered.api.command.CommandException;
+import org.spongepowered.api.command.CommandResult;
+import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.command.args.CommandContext;
+import org.spongepowered.api.command.spec.CommandExecutor;
+import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.format.TextColors;
 
-public class DelayedTeleportTask extends SpongeRunnable {
-    private Entity target;
-    private Location<World> location;
-    private Vector3d rotation;
-
-    public DelayedTeleportTask(Entity target, Location<World> location, Vector3d rotation) {
-        this.target = target;
-        this.location = location;
-        this.rotation = rotation;
-    }
-
-    public DelayedTeleportTask(Entity target, Location<World> location) {
-        this(target, location, new Vector3d(0, 0, 0));
-    }
-
-    public DelayedTeleportTask(Entity target) {
-        this(target, target.getLocation());
-    }
+public class SafariSaveCommand implements CommandExecutor {
 
     @Override
-    public void run() {
-        this.target.setLocationAndRotation(this.location, this.rotation);
+    public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
+        Safari.getInstance().saveConfig();
+        src.sendMessage(Text.of(TextColors.AQUA, "Saved warps to disk."));
+        return CommandResult.success();
     }
 
 }
