@@ -39,6 +39,7 @@ import io.github.darktilldawn.safari.commands.SafariWarpExecutor;
 import io.github.darktilldawn.safari.commands.SafariReloadExecutor;
 import io.github.darktilldawn.safari.commands.SafariSetExecutor;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
+import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.ConfigurationNode;
 import org.slf4j.Logger;
@@ -98,16 +99,6 @@ public class Safari {
         Safari.helper = this.game.getTeleportHelper();
         this.warps = new ArrayList<>();
         this.reloadConfig();
-
-        Optional<EconomyService> economyServiceOptional = this.game.getServiceManager().provide(EconomyService.class);
-        if (!economyServiceOptional.isPresent()) {
-            this.logger.warn("No economy plugin is installed! Starting up in free mode.");
-            this.logger.warn("In free mode, all warps are free! (Assuming you don't want that, install an economy plugin!)");
-            this.freeMode = true;
-        } else {
-            this.service = economyServiceOptional.get();
-            this.freeMode = false;
-        }
     }
 
     @Listener
@@ -118,6 +109,15 @@ public class Safari {
 
     @Listener
     public void onGameStarted(GameStartedServerEvent event) {
+        Optional<EconomyService> economyServiceOptional = this.game.getServiceManager().provide(EconomyService.class);
+        if (!economyServiceOptional.isPresent()) {
+            this.logger.warn("No economy plugin is installed! Starting up in free mode.");
+            this.logger.warn("In free mode, all warps are free! (Assuming you don't want that, install an economy plugin!)");
+            this.freeMode = true;
+        } else {
+            this.service = economyServiceOptional.get();
+            this.freeMode = false;
+        }
         this.getLogger().info("Safari has finished loading!");
     }
 
@@ -127,7 +127,8 @@ public class Safari {
             safariWarp.writeToConfig(this.getConfig());
         });
         try {
-            this.configManager.save(this.getConfig());
+            ConfigurationLoader loader = HoconConfigurationLoader.builder().setFile(this.defaultConfig.toFile()).build();
+            loader.save(this.getConfig());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -146,18 +147,17 @@ public class Safari {
                 .permission("safari.command.safari.set")
                 .arguments(
                         GenericArguments.onlyOne(GenericArguments.location(Text.of("location"))),
-                        GenericArguments.onlyOne(GenericArguments.string(Text.of("name"))))
+                        GenericArguments.onlyOne(GenericArguments.string(Text.of("name"))),
+                        GenericArguments.onlyOne(GenericArguments.string(Text.of("currency"))),
+                        GenericArguments.onlyOne(GenericArguments.doubleNum(Text.of("cost"))),
+                        GenericArguments.onlyOne(GenericArguments.integer(Text.of("duration"))))
                 .executor(new SafariSetExecutor()).build());
 
         // /safari warp
         subcommands.put(Arrays.asList("tp", "teleport", "warp", "goto", "take"), CommandSpec.builder().description(Text.of("Takes someone on a Safari."))
                 .permission("safari.command.safari.tp")
                 .arguments(
-                        GenericArguments.onlyOne(GenericArguments.player(Text.of("player"))),
-                        GenericArguments.onlyOne(GenericArguments.string(Text.of("warp"))),
-                        GenericArguments.onlyOne(GenericArguments.string(Text.of("currency"))),
-                        GenericArguments.onlyOne(GenericArguments.doubleNum(Text.of("cost"))),
-                        GenericArguments.onlyOne(GenericArguments.integer(Text.of("duration"))))
+                        GenericArguments.onlyOne(GenericArguments.string(Text.of("warp"))))
                 .executor(new SafariWarpExecutor())
                 .build());
 

@@ -40,9 +40,9 @@ public class SafariWarpExecutor implements CommandExecutor {
 
     @Override
     public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
-        if(args.getOne("player").isPresent()) {
+        if(src instanceof Player) {
             String warp = (String) args.getOne("warp").get();
-            Player player = (Player) args.getOne("player").get();
+            Player player = (Player) src;
 
             List<SafariWarp> warps = Safari.getInstance().getWarps();
             Optional<SafariWarp> applicable = warps.stream().filter(safariWarp -> safariWarp.getName().equals(warp)).findFirst();

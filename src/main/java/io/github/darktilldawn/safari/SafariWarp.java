@@ -38,6 +38,7 @@ import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
 
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -139,7 +140,8 @@ public class SafariWarp {
             DelayedTeleportTask task = new DelayedTeleportTask(player, player.getLocation(), player.getRotation());
             player.setLocation(this.location);
             task.runTaskLater(Safari.getInstance(), this.duration, TimeUnit.SECONDS);
-            player.sendMessage(Text.of(TextColors.AQUA, "You have been teleported to '", this.name, ".' You can remain here for ", String.format("%0d.%0d minutes", TimeUnit.MILLISECONDS.toMinutes(this.duration), TimeUnit.MILLISECONDS.toSeconds(this.duration) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(this.duration))), ", then you will be teleported back."));
+            String time = new StringBuilder().append(TimeUnit.SECONDS.toMinutes(this.duration)).append(".").append(this.duration - (((int) ((double) this.duration / 60))) * 60).append(" minutes").toString();
+            player.sendMessage(Text.of(TextColors.AQUA, "You have been teleported to '", this.name, ".' You can remain here for ", time, ", then you will be teleported back."));
         } else {
             player.setLocation(this.location);
             player.sendMessage(Text.of(TextColors.AQUA, "You have been teleported to '", this.name));

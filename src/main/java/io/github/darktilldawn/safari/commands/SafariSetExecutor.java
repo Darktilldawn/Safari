@@ -54,7 +54,7 @@ public class SafariSetExecutor implements CommandExecutor {
         if(cost < 0) {
             src.sendMessage(Text.of(TextColors.RED, "Cost cannot be less than 0..."));
         } else {
-            if(Safari.getInstance().getService().getCurrencies().stream().filter(curr -> curr.getDisplayName().toPlain().equalsIgnoreCase(currency)).findFirst().isPresent()) {
+            if(Safari.getInstance().isFreeMode() || Safari.getInstance().getService().getCurrencies().stream().filter(curr -> curr.getDisplayName().toPlain().equalsIgnoreCase(currency)).findFirst().isPresent()) {
                 if(!(location.getExtent() instanceof World)) {
                     src.sendMessage(Text.of(TextColors.RED, "That location is not linked to a world. It may be a chunk location."));
                 } else {
