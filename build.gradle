@@ -1,4 +1,8 @@
 apply plugin: 'java'
+
+group = "io.github.darktilldawn"
+version = "0.0.1"
+
 repositories {
     mavenCentral()
     maven {
