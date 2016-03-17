@@ -65,7 +65,7 @@ import org.spongepowered.api.text.Text;
 import org.spongepowered.api.world.TeleportHelper;
 
 
-@Plugin(id = "Safari", name = "Safari", version = "0.1")
+@Plugin(id = "io.github.darktilldawn.safari", name = "Safari", version = "0.1", authors = {"Darktilldawn", "Socratic_Phoenix"})
 public class Safari {
 
     public static TeleportHelper helper;

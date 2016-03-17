@@ -128,7 +128,7 @@ public class SafariWarp {
             return;
         }
 
-        Optional<UniqueAccount> accountOptional = this.safari.getService().getAccount(player.getUniqueId());
+        Optional<UniqueAccount> accountOptional = this.safari.getService().getOrCreateAccount(player.getUniqueId());
         Optional<Currency> currencyOptional = this.safari.getService().getCurrencies().stream().filter(currency -> currency.getDisplayName().toPlain().equalsIgnoreCase(this.currency)).findFirst();
         if (!currencyOptional.isPresent()) {
             this.safari.getLogger().error("No currency called '".concat(String.valueOf(this.currency).concat("'")));
@@ -136,11 +136,10 @@ public class SafariWarp {
         }
 
         if (!accountOptional.isPresent()) {
-            player.sendMessage(Text.of(TextColors.RED, "You do not have an economy account! ", TextColors.AQUA, "We'll create one for you, but you won't have any money..."));
-            this.safari.getService().createAccount(player.getUniqueId());
+            player.sendMessage(Text.of(TextColors.RED, "You do not have an economy account!"));
         } else {
             UniqueAccount account = accountOptional.get();
-            TransactionResult result = account.withdraw(currencyOptional.get(), BigDecimal.valueOf(this.amount), Cause.of(this));
+            TransactionResult result = account.withdraw(currencyOptional.get(), BigDecimal.valueOf(this.amount), Cause.builder().named("plugin", Safari.getInstance()).named("warp", this).build());
             ResultType resultType = result.getResult();
             if (resultType == ResultType.ACCOUNT_NO_FUNDS) {
                 player.sendMessage(Text.of(TextColors.RED, "You do not have enough money, you need at least ", this.amount, " ", currencyOptional.get().getPluralDisplayName(), " to use that warp."));
